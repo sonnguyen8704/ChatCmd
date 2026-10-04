@@ -12,7 +12,7 @@ export function UpdateSettings() {
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [restarting, setRestarting] = useState(false);
-  const autoRestart = useRef(false);
+  const [autoRestart, setAutoRestart] = useState(false);
   const restartInFlight = useRef(false);
 
   const refreshStatus = useCallback(async () => {
@@ -51,7 +51,7 @@ export function UpdateSettings() {
     if (!status || !isActiveUpdatePhase(status.phase) || status.phase === 'restarting') return;
     const timer = window.setInterval(() => { void refreshStatus(); }, 450);
     return () => window.clearInterval(timer);
-  }, [refreshStatus, status?.phase]);
+  }, [refreshStatus, status]);
 
   const restart = useCallback(async (targetVersion: string) => {
     if (restartInFlight.current) return;
@@ -64,24 +64,25 @@ export function UpdateSettings() {
       window.location.reload();
     } catch (reason) {
       restartInFlight.current = false;
+      setAutoRestart(false);
       setRestarting(false);
       setError(errorMessage(reason));
     }
   }, []);
 
   useEffect(() => {
-    if (status?.phase !== 'readyToRestart' || !status.latestVersion || !autoRestart.current) return;
+    if (status?.phase !== 'readyToRestart' || !status.latestVersion || !autoRestart) return;
     void restart(status.latestVersion);
-  }, [restart, status?.latestVersion, status?.phase]);
+  }, [autoRestart, restart, status]);
 
   const beginUpdate = async () => {
     setConfirming(false);
     setError('');
-    autoRestart.current = true;
+    setAutoRestart(true);
     try {
       setStatus(await api.startUpdate());
     } catch (reason) {
-      autoRestart.current = false;
+      setAutoRestart(false);
       setError(errorMessage(reason));
     }
   };
@@ -129,7 +130,7 @@ export function UpdateSettings() {
         <div className="update-settings-primary-actions">
           {status.updateAvailable && status.downloadAvailable && !busy && status.phase !== 'readyToRestart' &&
             <button type="button" className="button primary update-settings-cta" onClick={() => setConfirming(true)}><Download />{copy.update}</button>}
-          {status.phase === 'readyToRestart' && !autoRestart.current &&
+          {status.phase === 'readyToRestart' && !autoRestart &&
             <button type="button" className="button primary update-settings-cta" disabled={restarting} onClick={() => status.latestVersion && void restart(status.latestVersion)}>
               <RotateCcw className={restarting ? 'spin' : ''} />{restarting ? copy.restarting : copy.restart}
             </button>}

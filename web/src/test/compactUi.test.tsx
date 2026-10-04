@@ -56,21 +56,21 @@ function mountTask() {
 async function flush() { await act(async () => { await Promise.resolve(); }); }
 async function tick(ms = 2_000) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 async function confirmCompact() {
-  fireEvent.click(screen.getByRole('button', { name: 'Compact & resume now' }));
+  fireEvent.click(screen.getByRole('button', { name: tr('Compact & resume now') }));
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: compactText('confirm') }));
   await flush();
 }
-function currentSteps() { return within(screen.getByRole('list', { name: 'Compact & resume steps' })).getAllByRole('listitem'); }
+function currentSteps() { return within(screen.getByRole('list', { name: tr('Compact & resume steps') })).getAllByRole('listitem'); }
 
 describe('Compact & Resume task UI', () => {
   it('requires the exact accessible confirmation and restores focus on cancel/Escape without any mutation', async () => {
     mountTask(); await flush();
     expect(screen.getByText(compactText('empty'))).toBeVisible();
-    const trigger = screen.getByRole('button', { name: 'Compact & resume now' });
+    const trigger = screen.getByRole('button', { name: tr('Compact & resume now') });
     trigger.focus(); fireEvent.click(trigger);
-    const dialog = screen.getByRole('dialog', { name: 'Compact & resume now' });
-    expect(dialog).toHaveAccessibleDescription(compactConfirmation);
-    expect(within(dialog).getByText(compactConfirmation)).toBeVisible();
+    const dialog = screen.getByRole('dialog', { name: tr('Compact & resume now') });
+    expect(dialog).toHaveAccessibleDescription(tr(compactConfirmation));
+    expect(within(dialog).getByText(tr(compactConfirmation))).toBeVisible();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(api.startChatGptCompact).not.toHaveBeenCalled();
     expect(resumeChatGptCompact).not.toHaveBeenCalled();
@@ -85,19 +85,19 @@ describe('Compact & Resume task UI', () => {
 
   it('mounts the confirmation directly in body, outside a clipping footer, and removes it on task unmount', async () => {
     const view = mountTask(); await flush();
-    const trigger = screen.getByRole('button', { name: 'Compact & resume now' });
+    const trigger = screen.getByRole('button', { name: tr('Compact & resume now') });
     const footer = trigger.closest('footer')!;
     expect(footer).toHaveClass('task-chat-footer');
     // Simulate the containment that used to trap the inline backdrop in the footer.
     Object.assign(footer.style, { overflow: 'hidden', transform: 'translateZ(0)', contain: 'paint' });
     trigger.focus(); fireEvent.click(trigger);
-    const dialog = screen.getByRole('dialog', { name: 'Compact & resume now' });
+    const dialog = screen.getByRole('dialog', { name: tr('Compact & resume now') });
     const backdrop = dialog.closest('.modal-backdrop')!;
     expect(backdrop.parentElement === document.body).toBe(true);
     expect(view.container.contains(backdrop)).toBe(false);
     expect(footer.contains(dialog)).toBe(false);
     expect(dialog.closest('form')).toBeNull();
-    expect(dialog).toHaveAccessibleDescription(compactConfirmation);
+    expect(dialog).toHaveAccessibleDescription(tr(compactConfirmation));
     const checkbox = within(dialog).getByRole('checkbox', { name: compactText('continueAfterCompact') });
     expect(checkbox).not.toBeChecked();
     fireEvent.mouseDown(checkbox); fireEvent.click(checkbox);
@@ -114,9 +114,9 @@ describe('Compact & Resume task UI', () => {
     mountTask(); await flush();
     const input = screen.getByRole('textbox', { name: tr('Next message to ChatGPT') });
     fireEvent.change(input, { target: { value: 'Draft must not be submitted by a dialog button' } });
-    const trigger = screen.getByRole('button', { name: 'Compact & resume now' });
+    const trigger = screen.getByRole('button', { name: tr('Compact & resume now') });
     trigger.focus(); fireEvent.click(trigger);
-    const dialog = screen.getByRole('dialog', { name: 'Compact & resume now' });
+    const dialog = screen.getByRole('dialog', { name: tr('Compact & resume now') });
     const first = within(dialog).getByRole('button', { name: tr('Close dialog') });
     const last = within(dialog).getByRole('button', { name: compactText('confirm') });
     expect(first).toHaveFocus();
@@ -147,13 +147,13 @@ describe('Compact & Resume task UI', () => {
     await confirmCompact();
     expect(api.startChatGptCompact).toHaveBeenCalledExactlyOnceWith(compactTaskId, false);
     expect(resumeChatGptCompact).toHaveBeenCalledExactlyOnceWith('compact-test-job', compactTaskId);
-    const heading = screen.getByRole('heading', { name: 'ChatGPT is writing the handoff' });
+    const heading = screen.getByRole('heading', { name: tr('ChatGPT is writing the handoff') });
     expect(heading.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(currentSteps()).toHaveLength(4);
-    compactSteps.forEach((step, index) => expect(currentSteps()[index]).toHaveTextContent(step.label));
+    compactSteps.forEach((step, index) => expect(currentSteps()[index]).toHaveTextContent(tr(step.label)));
     expect(currentSteps()[0]).toHaveAttribute('aria-current', 'step');
-    expect(screen.getByRole('region', { name: 'Compact & resume progress' }).querySelector('[aria-live="polite"]')).not.toBeNull();
-    for (const name of ['Compact & resume now', tr('Send'), tr('Close this tab'), tr('Change model'), tr('Queue another message'), tr('Send immediate message')]) {
+    expect(screen.getByRole('region', { name: tr('Compact & resume progress') }).querySelector('[aria-live="polite"]')).not.toBeNull();
+    for (const name of [tr('Compact & resume now'), tr('Send'), tr('Close this tab'), tr('Change model'), tr('Queue another message'), tr('Send immediate message')]) {
       expect(screen.getByRole('button', { name })).toBeDisabled();
     }
     expect(input).toHaveValue('My preserved draft'); expect(input).toBeDisabled();
@@ -178,8 +178,8 @@ describe('Compact & Resume task UI', () => {
     expect(input).toBeEnabled(); expect(input).toHaveValue('My preserved draft');
     expect(screen.getByTestId('route')).toHaveTextContent(`/tasks/${compactTaskId}`);
     expect(screen.getByRole('link', { name: tr('Open original conversation') })).toHaveAttribute('href', newUrl);
-    expect(screen.queryByRole('heading', { name: 'ChatGPT is writing the handoff' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Compact & resume progress' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: tr('ChatGPT is writing the handoff') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: tr('Compact & resume progress') })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: tr('Send') })); await flush();
     expect(api.sendChatGptMessage).toHaveBeenCalledExactlyOnceWith(compactTaskId, { model: 'Auto', content: 'My preserved draft' });
     expect(dispatchChatGptRequest).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'next-request', conversationUrl: newUrl }));
@@ -226,7 +226,7 @@ describe('Compact & Resume task UI', () => {
     fireEvent.click(screen.getByRole('button', { name: compactText('cancelJob') })); await flush();
     expect(api.cancelChatGptCompact).toHaveBeenCalledExactlyOnceWith('compact-test-job', 3);
     expect(screen.queryByRole('button', { name: compactText('cancelJob') })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Compact & resume now' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: tr('Compact & resume now') })).toBeEnabled();
   });
 
   it('refreshes active state on realtime/reconnect and leaves unrelated task events alone', async () => {
@@ -236,7 +236,7 @@ describe('Compact & Resume task UI', () => {
     expect(api.chatGptCompact).toHaveBeenCalledTimes(baseline);
     vi.mocked(api.chatGptCompact).mockResolvedValue({ active: compactJob(), history: [] });
     await act(async () => { listeners.forEach((listener) => listener({ id: 'own-update', type: 'chatgpt_compact_updated', taskId: compactTaskId, occurredAt: '' })); });
-    expect(screen.getByRole('heading', { name: 'ChatGPT is writing the handoff' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: tr('ChatGPT is writing the handoff') })).toBeVisible();
     expect(resumeChatGptCompact).toHaveBeenCalledTimes(1);
     await tick(10_000);
     await act(async () => { listeners.forEach((listener) => listener({ id: 'connected', type: 'system.connected', occurredAt: '' })); });
@@ -270,13 +270,13 @@ describe('Compact & Resume task UI', () => {
   it('does not unlock sends when compact state is initially unavailable', async () => {
     vi.mocked(api.chatGptCompact).mockRejectedValue(new Error('offline'));
     mountTask(); await flush();
-    expect(screen.getByRole('button', { name: 'Compact & resume now' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: tr('Compact & resume now') })).toBeDisabled();
     expect(screen.getByRole('button', { name: tr('Send') })).toBeDisabled();
     expect(screen.getAllByText(/offline/).length).toBeGreaterThan(0);
     vi.mocked(api.chatGptCompact).mockResolvedValue({ active: null, history: [] });
-    fireEvent.click(within(screen.getByRole('region', { name: 'Compact & resume error' })).getByRole('button', { name: tr('Retry') }));
+    fireEvent.click(within(screen.getByRole('region', { name: tr('Compact & resume error') })).getByRole('button', { name: tr('Retry') }));
     await flush();
-    expect(screen.getByRole('button', { name: 'Compact & resume now' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: tr('Compact & resume now') })).toBeEnabled();
   });
 
   it.each<CompactPhase>(['preparing', 'writing_handoff', 'saving_handoff', 'opening_new_chat', 'completed', 'cancelled'])('renders %s with correct step/status and waiting detail', async (phase) => {
@@ -284,8 +284,8 @@ describe('Compact & Resume task UI', () => {
     vi.mocked(api.chatGptCompact).mockResolvedValue({ active: ['completed', 'cancelled'].includes(phase) ? null : job, history: [job] });
     render(<CompactProvider taskId={compactTaskId}><CompactStatusCard /></CompactProvider>); await flush();
     if (phase === 'completed' || phase === 'cancelled') {
-      expect(screen.queryByRole('region', { name: 'Compact & resume progress' })).not.toBeInTheDocument();
-      expect(screen.queryByText('ChatGPT is writing the handoff')).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: tr('Compact & resume progress') })).not.toBeInTheDocument();
+      expect(screen.queryByText(tr('ChatGPT is writing the handoff'))).not.toBeInTheDocument();
       return;
     }
     const index = compactSteps.findIndex((step) => step.phase === phase);
@@ -300,8 +300,8 @@ describe('Compact & Resume task UI', () => {
 
 it('continuation checkbox is opt-in for each confirmation and is never submitted by cancelling', async () => {
   mountTask(); await flush();
-  expect(screen.queryByRole('heading', { name: 'ChatGPT is writing the handoff' })).not.toBeInTheDocument();
-  const trigger = screen.getByRole('button', { name: 'Compact & resume now' });
+  expect(screen.queryByRole('heading', { name: tr('ChatGPT is writing the handoff') })).not.toBeInTheDocument();
+  const trigger = screen.getByRole('button', { name: tr('Compact & resume now') });
   fireEvent.click(trigger);
   let checkbox = screen.getByRole('checkbox', { name: compactText('continueAfterCompact') });
   expect(checkbox).not.toBeChecked();

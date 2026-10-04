@@ -1,4 +1,7 @@
-use std::{path::{Path, PathBuf}, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use axum::{
     Json,
@@ -24,11 +27,13 @@ pub(super) async fn upload_interface_font(
     let headers = request.headers().clone();
     let body = to_bytes(request.into_body(), MAX_FONT_BYTES)
         .await
-        .map_err(|_| Problem::new(
-            StatusCode::PAYLOAD_TOO_LARGE,
-            "Font file too large",
-            "Font file must be no larger than 10 MB.",
-        ))?;
+        .map_err(|_| {
+            Problem::new(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                "Font file too large",
+                "Font file must be no larger than 10 MB.",
+            )
+        })?;
     if body.is_empty() {
         return Err(Problem::new(
             StatusCode::BAD_REQUEST,
@@ -70,7 +75,8 @@ pub(super) async fn upload_interface_font(
     });
     tokio::fs::write(
         directory.join(FONT_META_FILE),
-        serde_json::to_vec_pretty(&metadata).map_err(|error| font_storage_problem(error.to_string()))?,
+        serde_json::to_vec_pretty(&metadata)
+            .map_err(|error| font_storage_problem(error.to_string()))?,
     )
     .await
     .map_err(font_storage_problem)?;
@@ -99,12 +105,12 @@ pub(super) async fn interface_font(
     let mut response = bytes.into_response();
     response.headers_mut().insert(
         header::CONTENT_TYPE,
-        HeaderValue::from_str(mime_type).unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
+        HeaderValue::from_str(mime_type)
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
     );
-    response.headers_mut().insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("no-store"),
-    );
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     Ok(response)
 }
 
@@ -151,8 +157,18 @@ fn required_header(headers: &HeaderMap, name: &'static str) -> Result<String, Pr
         .and_then(|value| value.to_str().ok())
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| Problem::new(StatusCode::BAD_REQUEST, "Invalid font upload", format!("{name} header is required.")))?;
-    Ok(value.chars().filter(|value| !value.is_control()).take(160).collect())
+        .ok_or_else(|| {
+            Problem::new(
+                StatusCode::BAD_REQUEST,
+                "Invalid font upload",
+                format!("{name} header is required."),
+            )
+        })?;
+    Ok(value
+        .chars()
+        .filter(|value| !value.is_control())
+        .take(160)
+        .collect())
 }
 
 fn font_extension(file_name: &str) -> Option<&'static str> {
@@ -173,7 +189,11 @@ fn font_mime(extension: &str) -> &'static str {
 }
 
 fn font_not_found() -> Problem {
-    Problem::new(StatusCode::NOT_FOUND, "Font not found", "No uploaded interface font is available.")
+    Problem::new(
+        StatusCode::NOT_FOUND,
+        "Font not found",
+        "No uploaded interface font is available.",
+    )
 }
 
 fn font_storage_problem(error: impl std::fmt::Display) -> Problem {
