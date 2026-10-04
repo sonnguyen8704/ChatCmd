@@ -35,6 +35,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      # The native-capture Rust integration test invokes the extension's jsdom harness.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
