@@ -50,3 +50,6 @@ export class FakeSocket {
 }
 
 vi.stubGlobal('WebSocket', FakeSocket);
+
+// jsdom does not implement the browser element scrolling API.
+Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() });

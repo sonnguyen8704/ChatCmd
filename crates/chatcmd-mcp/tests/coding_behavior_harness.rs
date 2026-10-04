@@ -4,6 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+#[path = "support/fixture_hash.rs"]
+mod fixture_hashing;
+
 const REQUIRED_CASES: [&str; 23] = [
     "E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09", "E10", "E11", "E12", "E13",
     "E14", "E15", "E16", "E17", "E18", "E19", "E20", "E21", "E22", "E23",
@@ -194,7 +197,8 @@ fn fixture_hash(name: &str) -> String {
     for relative in files {
         digest.update(relative.to_string_lossy().replace('\\', "/").as_bytes());
         digest.update([0]);
-        digest.update(fs::read(root.join(relative)).expect("fixture file must be readable"));
+        let contents = fs::read(root.join(relative)).expect("fixture file must be readable");
+        digest.update(fixture_hashing::normalize_line_endings(&contents));
         digest.update([0]);
     }
     format!("{:x}", digest.finalize())

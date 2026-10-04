@@ -1,0 +1,30 @@
+name: Fork bootstrap checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/updater/**'
+      - 'scripts/run-candidate.sh'
+      - 'scripts/test_candidate.py'
+      - '.github/workflows/fork-bootstrap-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  updater-and-launcher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: rustfmt --edition 2024 --check src/updater/github.rs
+      - run: bash -n scripts/run-candidate.sh
+      - run: python3 scripts/test_candidate.py
+      - run: cargo test --locked --bin chat-cmd-client updater::
