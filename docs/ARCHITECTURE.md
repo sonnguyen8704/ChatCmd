@@ -68,8 +68,6 @@ MCP tools are grouped into device, terminal, filesystem/workspace, Git, process,
 
 The management UI communicates with `/api/local/*`. Requests require `X-ChatCmdClient: local-ui`; extension callbacks use the narrower `chatgpt-extension` marker. Health and version endpoints remain outside this protected route group.
 
-The browser establishes an ephemeral P-256 ECDH session, derives an AES-256-GCM key with HKDF-SHA256, and encrypts local JSON request/response bodies. The WebSocket uses a similar per-connection handshake and rejects plaintext application frames after setup. HTTP associated data binds ciphertext to direction, method, full path/query, and response status.
-
 The local management API and WebSocket use ordinary JSON without a custom application-layer encryption handshake. Caller markers, GUI authentication, extension allowlists, and route authorization remain the security boundaries. See [Transport protocol](ENCRYPTION_PROTOCOL.md).
 
 ## Task and terminal lifecycle

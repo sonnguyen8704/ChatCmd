@@ -4,7 +4,9 @@ use serde::Deserialize;
 
 use super::model::{ReleaseSelection, UpdateAsset, UpdateTarget};
 
-const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/int04/ChatCMD/releases/latest";
+const LATEST_RELEASE_URL: &str =
+    "https://api.github.com/repos/sonnguyen8704/ChatCmd/releases/latest";
+const RELEASE_PATH: &str = "/sonnguyen8704/ChatCmd/releases";
 const GITHUB_ACCEPT: &str = "application/vnd.github+json";
 const GITHUB_API_VERSION: &str = "2022-11-28";
 
@@ -54,7 +56,7 @@ pub(crate) async fn fetch_latest(
     if release.draft || release.prerelease {
         return Ok(None);
     }
-    validate_https_url(&release.html_url, &["github.com"])
+    validate_release_url(&release.html_url, "tag", &release.tag_name, None)
         .context("validate GitHub release page URL")?;
 
     let note = release.body.unwrap_or_default().trim().to_owned();
@@ -74,7 +76,9 @@ pub(crate) async fn fetch_latest(
             .cloned()
     });
     let asset = match matching_asset {
-        Some(asset) => Some(resolve_asset(client, &release.assets, asset).await?),
+        Some(asset) => {
+            Some(resolve_asset(client, &release.assets, asset, &release.tag_name).await?)
+        }
         None => None,
     };
 
@@ -95,9 +99,15 @@ async fn resolve_asset(
     client: &Client,
     release_assets: &[GithubAsset],
     asset: GithubAsset,
+    tag: &str,
 ) -> Result<UpdateAsset> {
-    validate_https_url(&asset.browser_download_url, &["github.com"])
-        .context("validate GitHub release download URL")?;
+    validate_release_url(
+        &asset.browser_download_url,
+        "download",
+        tag,
+        Some(&asset.name),
+    )
+    .context("validate GitHub release download URL")?;
     let sha256 = if let Some(digest) = asset.digest.as_deref().and_then(parse_sha256_digest) {
         digest
     } else {
@@ -107,7 +117,7 @@ async fn resolve_asset(
             .ok_or_else(|| {
                 anyhow!("GitHub release asset has no SHA-256 digest or checksum file")
             })?;
-        fetch_checksum_file(client, sums, &asset.name).await?
+        fetch_checksum_file(client, sums, &asset.name, tag).await?
     };
     Ok(UpdateAsset {
         name: asset.name,
@@ -121,9 +131,15 @@ async fn fetch_checksum_file(
     client: &Client,
     sums_asset: &GithubAsset,
     wanted_name: &str,
+    tag: &str,
 ) -> Result<String> {
-    validate_https_url(&sums_asset.browser_download_url, &["github.com"])
-        .context("validate GitHub checksum download URL")?;
+    validate_release_url(
+        &sums_asset.browser_download_url,
+        "download",
+        tag,
+        Some(&sums_asset.name),
+    )
+    .context("validate GitHub checksum download URL")?;
     let response = client
         .get(&sums_asset.browser_download_url)
         .send()
@@ -163,20 +179,35 @@ pub(crate) fn validate_github_download_url(value: &str) -> Result<()> {
     bail!("GitHub update download redirected to an untrusted host")
 }
 
-fn validate_https_url(value: &str, allowed_hosts: &[&str]) -> Result<()> {
+fn validate_release_url(value: &str, kind: &str, tag: &str, asset: Option<&str>) -> Result<()> {
     let url = reqwest::Url::parse(value).context("parse URL")?;
-    if url.scheme() != "https" {
-        bail!("URL must use HTTPS");
-    }
-    let host = url.host_str().ok_or_else(|| anyhow!("URL has no host"))?;
-    if allowed_hosts
-        .iter()
-        .any(|allowed| host.eq_ignore_ascii_case(allowed))
+    if url.scheme() != "https"
+        || url.host_str() != Some("github.com")
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.port().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
     {
-        Ok(())
-    } else {
-        bail!("URL host is not allowed")
+        bail!("Release URL must use the trusted GitHub HTTPS origin");
     }
+    let mut expected = reqwest::Url::parse("https://github.com")?;
+    {
+        let mut segments = expected
+            .path_segments_mut()
+            .map_err(|_| anyhow!("invalid release base"))?;
+        for part in RELEASE_PATH.trim_start_matches('/').split('/') {
+            segments.push(part);
+        }
+        segments.push(kind).push(tag);
+        if let Some(name) = asset {
+            segments.push(name);
+        }
+    }
+    if url.path() != expected.path() {
+        bail!("Release URL does not match this fork, tag, and asset");
+    }
+    Ok(())
 }
 
 fn extract_build_version(note: &str) -> Option<String> {
@@ -224,6 +255,47 @@ fn is_sha256_hex(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn release_urls_are_bound_to_the_fork_tag_and_asset() {
+        let good = "https://github.com/sonnguyen8704/ChatCmd/releases/download/v1/ChatCMD-macos-apple-silicon.zip";
+        assert!(
+            validate_release_url(
+                good,
+                "download",
+                "v1",
+                Some("ChatCMD-macos-apple-silicon.zip")
+            )
+            .is_ok()
+        );
+        for bad in [
+            good.replace("sonnguyen8704", "int04"),
+            good.replace("/v1/", "/v2/"),
+            good.replace("apple-silicon", "intel"),
+            good.replace("https:", "http:"),
+            format!("{good}?token=anything"),
+            good.replace("github.com", "github.com.evil.example"),
+        ] {
+            assert!(
+                validate_release_url(
+                    &bad,
+                    "download",
+                    "v1",
+                    Some("ChatCMD-macos-apple-silicon.zip")
+                )
+                .is_err()
+            );
+        }
+        assert!(
+            validate_release_url(
+                "https://github.com/sonnguyen8704/ChatCmd/releases/tag/v1",
+                "tag",
+                "v1",
+                None
+            )
+            .is_ok()
+        );
+    }
 
     #[test]
     fn extracts_full_build_version_from_release_notes() {
