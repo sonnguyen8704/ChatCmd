@@ -4,14 +4,14 @@
   "network": "disabled",
   "toolchains": { "rust": "workspace Cargo.lock / rust-version 1.85", "typescript": "Node built-ins only; execution not required by this harness" },
   "fixtureHashes": {
-    "baseline": "1a85cb4adccbcd36c421619ac65be9b5c49ac89b6085aa1de1df77c604a87f0d",
-    "cache": "ccda9e8693068d1f008d54cbba327f0a55f5dcf6b00652235c230bbe6d5bed93",
-    "cross-layer": "591c74ab334c5e8bdab7f08e38fd29615e4ed39b46a6e102284fd7107c622b44",
-    "plan": "faeeb1b6a7a710a90cf2e68dda6603485dc414e34936b98a25781d5586447983",
-    "regression": "51acfb20ed6ec9f37999c28ef9ef9775b52b1099d54ba137e90135a0ea50fb88",
-    "review": "6679fd17c11cfad2ce8f1b5b8f8d4d96554067c25b941fe0683cfec59eac7dd2",
-    "rust": "8d2c41d83f2e3f06eba85a7d5485d5f084242783195f408a10bd8de267c6fdbf",
-    "typescript": "9226f87a467a944e5a6b128e10073e9c59a4d8929e5bfb608da296ac0f4facf2"
+    "baseline": "ba0699523c7196571ae8e04b00ef0da8f73caab04b4c1b8bcc17849ca32f9341",
+    "cache": "d5a61ce1e1556b1dd4e6917c6fdb91870033454c9661308b3729462d2ad9cbb4",
+    "cross-layer": "d844e857771417b62123513e1e71ff4f257fe3c30370ebddae8033b0a54ae224",
+    "plan": "f8bfd074c48eaa8a20b9e66ed80c3fa2afcf91c58ff8fae8852a7356cd260bbd",
+    "regression": "f1bb81387a0156d2d8b7095d7379cfc3bf66dc677febbcc48616efb8c3601c0e",
+    "review": "f2df450b1002abb0b58cfae64b77c667dfb72cb3701a5b526677889e6ab2ad2f",
+    "rust": "755e36411190f330131fe733f29469ae24b3177c7935e6e3571fa7ebeeb0c29e",
+    "typescript": "a724f8afc1021a4d01ac8bc6f54fd6c9f4ec02ce95cb6bbb95daed3014f8c749"
   },
   "liveTier": { "status": "blockedNotRun", "reason": "No live host/model was invoked by the deterministic suite." },
   "manualUi": {
